@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  CASHIER
+}
+
+enum AccountCategory {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum PaymentMethod {
+  CASH
+  QRIS
+  TRANSFER
+  KASBON
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  CANCELLED
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum ReferenceType {
+  SALES
+  STOCK_ADJUSTMENT
+  PURCHASE
+  EXPENSE
+  INITIAL
+  MANUAL
+  VOID
+}
+
+enum StockAdjustmentReason {
+  DAMAGE
+  EXPIRED
+  LOST
+  CORRECTION
+}
+
+enum ExpenseCategory {
+  UTILITY
+  RENT
+  SALARY
+  TRANSPORT
+  SUPPLIES
+  OTHER
+}
+
+enum FundSource {
+  CASH
+  BANK
+}
+
+enum PurchasePaymentType {
+  CASH
+  CREDIT
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outlets   Outlet[]
+  users     User[]
+  accounts  ChartOfAccount[]
+}
+
+model Outlet {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  code      String
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shifts         Shift[]
+  salesOrders    SalesOrder[]
+  stockMutations StockMutation[]
+  products       ProductStock[]
+  expenses       Expense[]
+  purchases      Purchase[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  pin       String?  // PIN untuk otorisasi void / supervisor
+  role      Role     @default(CASHIER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shifts           Shift[]         @relation("PrimaryCashier")
+  shiftAssignments ShiftCashier[]
+  salesOrders      SalesOrder[]
+  stockMutations   StockMutation[]
+  expenses         Expense[]
+  purchases        Purchase[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  sku          String   @unique
+  barcode      String?  @unique
+  name         String
+  description  String?
+  categoryId   String?
+  costPrice    Float    // HPP dasar
+  sellingPrice Float    // Harga jual
+  currentStock Int      @default(0) // Agregat stok
+  minStock     Int      @default(5)
+  unit         String   @default("pcs")
+  imageUrl     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category       Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems     SalesOrderItem[]
+  stockMutations StockMutation[]
+  outletStocks   ProductStock[]
+  purchaseItems  PurchaseItem[]
+}
+
+model ProductStock {
+  id        String   @id @default(cuid())
+  productId String
+  outletId  String
+  stockQty  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  outlet    Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, outletId])
+}
+
+model Customer {
+  id        String       @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime     @default(now())
+  orders    SalesOrder[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  contact   String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+}
+
+model Shift {
+  id                 String      @id @default(cuid())
+  outletId           String
+  cashierId          String
+  startTime          DateTime    @default(now())
+  endTime            DateTime?
+  initialCash        Float       // Modal awal kas di laci
+  expectedEndingCash Float       @default(0) // Total sistem = Modal Awal + Total Penjualan Tunai - Uang Keluar
+  actualEndingCash   Float?      // Kas fisik aktual yang dihitung saat closing
+  difference         Float?      // actualEndingCash - expectedEndingCash (Minus = Kurang, Plus = Lebih)
+  status             ShiftStatus @default(OPEN)
+  notes              String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  outlet      Outlet         @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  cashier     User           @relation("PrimaryCashier", fields: [cashierId], references: [id])
+  assignments ShiftCashier[]
+  salesOrders SalesOrder[]
+}
+
+model ShiftCashier {
+  id        String    @id @default(cuid())
+  shiftId   String
+  userId    String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, userId])
+}
+
+model SalesOrder {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique // Contoh: SO-20260816-0001
+  outletId      String
+  shiftId       String
+  cashierId     String
+  customerId    String?
+  paymentMethod PaymentMethod @default(CASH)
+  paymentStatus PaymentStatus @default(PAID)
+  subtotal      Float
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  totalAmount   Float
+  amountPaid    Float         // Uang tunai/nominal yang dibayarkan
+  changeAmount  Float         @default(0) // Kembalian
+  isVoid        Boolean       @default(false)
+  voidReason    String?
+  voidByUserId  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  outlet        Outlet           @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  shift         Shift            @relation(fields: [shiftId], references: [id])
+  cashier       User             @relation(fields: [cashierId], references: [id])
+  customer      Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items         SalesOrderItem[]
+  journalEntries JournalEntry[]
+}
+
+model SalesOrderItem {
+  id           String   @id @default(cuid())
+  salesOrderId String
+  productId    String
+  qty          Int
+  unitPrice    Float
+  unitCost     Float    // HPP per unit saat transaksi berlangsung
+  subtotal     Float
+  createdAt    DateTime @default(now())
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id])
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  expenseNumber String          @unique // EXP-20260817-0001
+  outletId      String
+  userId        String?
+  category      ExpenseCategory
+  description   String
+  amount        Float
+  fundSource    FundSource      @default(CASH)
+  expenseDate   DateTime        @default(now())
+  note          String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Purchase {
+  id             String              @id @default(cuid())
+  purchaseNumber String              @unique // PO-20260817-0001
+  outletId       String
+  userId         String?
+  supplierName   String              @default("Supplier Umum")
+  purchaseDate   DateTime            @default(now())
+  paymentType    PurchasePaymentType @default(CASH)
+  fundSource     FundSource          @default(CASH)
+  totalAmount    Float
+  note           String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  outlet Outlet         @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user   User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items  PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  productId  String
+  qty        Int
+  unitCost   Float
+  subtotal   Float
+  createdAt  DateTime @default(now())
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+}
+
+model ChartOfAccount {
+  id            String          @id @default(cuid())
+  companyId     String
+  accountCode   String          // 1101, 1300, 4100, 5100, 6020, etc.
+  accountName   String          // Kas Toko, Persediaan Barang, Pendapatan Penjualan, HPP, etc.
+  category      AccountCategory // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  normalBalance NormalBalance   // DEBIT / CREDIT
+  description   String?
+  isSystem      Boolean         @default(false) // Akun bawaan sistem standar ritel
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journalLines JournalLine[]
+
+  @@unique([companyId, accountCode])
+}
+
+model JournalEntry {
+  id              String        @id @default(cuid())
+  entryNumber     String        @unique // Contoh: JV-20260816-0001
+  transactionDate DateTime      @default(now())
+  referenceType   ReferenceType
+  referenceId     String?       // ID dari SalesOrder, StockAdjustment, Purchase, Expense
+  salesOrderId    String?
+  memo            String
+  isPosted        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  salesOrder   SalesOrder?   @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
+  journalLines JournalLine[]
+}
+
+model JournalLine {
+  id             String   @id @default(cuid())
+  journalEntryId String
+  accountId      String
+  debitAmount    Float    @default(0)
+  creditAmount   Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id])
+}
+
+model StockMutation {
+  id            String                 @id @default(cuid())
+  productId     String
+  outletId      String
+  userId        String?
+  referenceType ReferenceType
+  referenceId   String?
+  reason        StockAdjustmentReason?
+  qtyIn         Int                    @default(0)
+  qtyOut        Int                    @default(0)
+  balanceStock  Int
+  note          String?
+  createdAt     DateTime               @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  outlet  Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

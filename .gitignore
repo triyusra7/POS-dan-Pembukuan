@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# local databases
+*.db
+*.db-journal
+dev.db
+
+# editor & agent folders
+.claude/
+.windsurf/
+.agents/
+Plus_Jakarta_Sans (1)/

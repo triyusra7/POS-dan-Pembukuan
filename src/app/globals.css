@@ -1,26 +1,224 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jakarta), "Plus Jakarta Sans", ui-monospace, monospace;
+  --font-heading: var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Palet netral — dasar seluruh permukaan */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Warna teks berjenjang */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  /* Warna merek Authentic Teal (#035352) & Sidecar Yellow (#F3E8BC) */
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-sidecar: var(--sidecar);
+  --color-sidecar-soft: var(--sidecar-soft);
+  --color-sidecar-ink: var(--sidecar-ink);
+  --color-accent-gold: var(--sidecar);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Permukaan: putih bersih di atas kanvas abu sangat terang */
+  --canvas: #f8faf9;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f4;
+  --line: #e2e9e8;
+  --line-strong: #cbd7d5;
+
+  /* Teks: hitam lembut */
+  --ink: #162423;
+  --ink-soft: #485c5a;
+  --ink-muted: #829492;
+
+  /* Merek Mendasar: Authentic Teal (#035352) & Sidecar Yellow (#F3E8BC) */
+  --brand: #035352;
+  --brand-soft: #e5efef;
+  --sidecar: #F3E8BC;
+  --sidecar-soft: #fcf9ee;
+  --sidecar-ink: #493f13;
+
+  --positive: #15803d;
+  --positive-soft: #edf7f0;
+  --negative: #be3a20;
+  --negative-soft: #fdf0ed;
+  --warning: #b45309;
+  --warning-soft: #fef8ee;
+
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+
+  --primary: #035352;
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--ink-soft);
+
+  --accent: var(--sidecar-soft);
+  --accent-foreground: var(--sidecar-ink);
+
+  --destructive: var(--negative);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: #035352;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    font-family: var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    @apply bg-canvas text-ink antialiased min-h-screen;
+  }
+
+  input,
+  button,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.021em;
+    font-weight: 700;
+  }
+
+  /* Semua angka rupiah sejajar rapi antar baris */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Mode Aksesibilitas Ukuran Tulisan (Ramah Lansia / Penglihatan) */
+  html[data-text-size="large"] {
+    font-size: 17.5px;
+  }
+
+  html[data-text-size="extra"] {
+    font-size: 19.5px;
+  }
+
+  html[data-text-size="large"] input,
+  html[data-text-size="large"] button,
+  html[data-text-size="large"] select {
+    font-size: 0.95rem;
+  }
+
+  html[data-text-size="extra"] input,
+  html[data-text-size="extra"] button,
+  html[data-text-size="extra"] select {
+    font-size: 1.05rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Skeleton loading */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton {
+  background-color: var(--surface-muted);
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd7d5;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ab0ad;
+  background-clip: content-box;
+  border: 2px solid transparent;
 }
