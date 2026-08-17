@@ -186,10 +186,12 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
-    console.error("❌ Error saat seeding:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error("❌ Error saat seeding:", e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
