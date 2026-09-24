@@ -46,6 +46,7 @@ next-env.d.ts
 *.db
 *.db-journal
 dev.db
+/data/
 
 # editor & agent folders
 .claude/
